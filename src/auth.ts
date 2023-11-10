@@ -1,17 +1,31 @@
-import jwt from 'jsonwebtoken';
+import { Hono } from 'hono'
+import jwt from 'jsonwebtoken'
 
-export async function get(request) {
-    const token = request.headers.authorization ? .split(' ')[1];
-    if (!token) {
-        return { status: 401, body: 'Unauthorized' };
-    }
+const app = new Hono()
 
-    try {
-        const payload = jwt.decode(token);
-        const userId = payload.sub; // JWTのsubフィールドからユーザーIDを取得
-        const email = payload.email; // JWTのemailフィールドからEmailを取得
-        return { status: 200, body: { userId, email } };
-    } catch (error) {
-        return { status: 401, body: 'Invalid token' };
-    }
+// JWTペイロードのためのインターフェース
+interface JwtPayload {
+  sub: string;
+  email: string;
 }
+
+app.get('/user', async (c) => {
+  const token = c.req.header('authorization')?.split(' ')[1]
+  if (!token) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+
+  try {
+    const payload = jwt.decode(token) as JwtPayload | null
+    if (payload) {
+      const { sub: userId, email } = payload;
+      return c.json({ userId, email });
+    } else {
+      return c.json({ error: 'Invalid token' }, 401);
+    }
+  } catch (error) {
+    return c.json({ error: 'Invalid token' }, 401);
+  }
+})
+
+export default app;
