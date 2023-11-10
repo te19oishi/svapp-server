@@ -26,13 +26,7 @@ CREATE TABLE WorkTimeManagement (
     FOREIGN KEY (employee_id) REFERENCES Employees(employee_id)
 );
 
--- Employeesテーブルのemployee_idにインデックスを作成
 CREATE INDEX idx_employee_id ON Employees(employee_id);
 
--- AttendanceRecordsテーブルのemployee_idとdateにインデックスを作成
-CREATE INDEX idx_attendance_employee_id ON AttendanceRecords(employee_id);
-CREATE INDEX idx_attendance_date ON AttendanceRecords(date);
-
--- WorkTimeManagementテーブルのemployee_idとdateにインデックスを作成
 CREATE INDEX idx_worktime_employee_id ON WorkTimeManagement(employee_id);
 CREATE INDEX idx_worktime_date ON WorkTimeManagement(date);
