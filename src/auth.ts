@@ -1,7 +1,9 @@
 import { Hono } from 'hono'
+import { cors } from 'hono/cors';
 import jwt from 'jsonwebtoken'
 
-const app = new Hono()
+const app = new Hono();
+app.use('/api/*', cors());
 
 // JWTペイロードのためのインターフェース
 interface JwtPayload {
@@ -9,14 +11,14 @@ interface JwtPayload {
   email: string;
 }
 
-app.get('/user', async (c) => {
-  const token = c.req.header('authorization')?.split(' ')[1]
+app.get('/api/auth', async (c) => {
+  const token = c.req.header('authorization')?.split(' ')[1];
   if (!token) {
-    return c.json({ error: 'Unauthorized' }, 401)
+    return c.json({ error: 'Unauthorized' }, 401);
   }
 
   try {
-    const payload = jwt.decode(token) as JwtPayload | null
+    const payload = jwt.decode(token) as JwtPayload | null;
     if (payload) {
       const { sub: userId, email } = payload;
       return c.json({ userId, email });
