@@ -1,32 +1,54 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 
-export interface Env {
-	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-	// MY_KV_NAMESPACE: KVNamespace;
-	//
-	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-	// MY_DURABLE_OBJECT: DurableObjectNamespace;
-	//
-	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-	// MY_BUCKET: R2Bucket;
-	//
-	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
-	// MY_SERVICE: Fetcher;
-	//
-	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
-	// MY_QUEUE: Queue;
+interface Comment {
+	author: string;
+	body: string;
 }
+const app = new Hono();
+app.use('/api/*', cors());
 
-export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		return new Response('Hello World!');
-	},
-};
+app.get('/api/posts/:slug/comments', async c => {
+	const { slug } = c.req.param();
+	const { results } = await c.env.SVAPP_DB.prepare(
+		`
+    select * from comments where post_slug = ?
+  `
+	)
+		.bind(slug)
+		.all();
+	return c.json(results);
+});
+
+app.post('/api/posts/:slug/comments', async c => {
+	const { slug } = c.req.param();
+	const { author, body } = await c.req.json<Comment>();
+
+	if (!author) return c.text('Missing author value for new comment');
+	if (!body) return c.text('Missing body value for new comment');
+
+	const { success } = await c.env.SVAPP_DB.prepare(
+		`
+    insert into comments (author, body, post_slug) values (?, ?, ?)
+  `
+	)
+		.bind(author, body, slug)
+		.run();
+
+	if (success) {
+		c.status(201);
+		return c.text('Created');
+	} else {
+		c.status(500);
+		return c.text('Something went wrong');
+	}
+});
+
+app.onError((err, c) => {
+	console.error(`${err}`);
+	return c.text(err.toString());
+});
+
+app.notFound(c => c.text('Not found', 404));
+
+export default app;
