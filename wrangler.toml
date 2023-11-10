@@ -2,6 +2,10 @@ name = "crimson-sunset-1b57"
 main = "src/index.ts"
 compatibility_date = "2023-10-30"
 
+d1_databases = [
+  { binding = "SVAPP_DB", name = "svapp-db", database_id = "482e9812-68b9-4299-aa0b-01016efb538c" }
+]
+
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
 # Note: Use secrets to store sensitive data.
 # Docs: https://developers.cloudflare.com/workers/platform/environment-variables
