@@ -1,12 +1,12 @@
 CREATE TABLE Users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(100),
     email VARCHAR(255),
     role VARCHAR(100)
 );
 
 CREATE TABLE AttendanceRecords (
-    id INT PRIMARY KEY AUTO_INCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INT,
     date DATE,
     time_in TIME,
@@ -15,7 +15,7 @@ CREATE TABLE AttendanceRecords (
 );
 
 CREATE TABLE WorkTimeManagement (
-    id INT PRIMARY KEY AUTO_INCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INT,
     date DATE,
     worked_hours DECIMAL(5, 2),
