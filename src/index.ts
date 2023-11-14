@@ -5,17 +5,18 @@ interface Comment {
 	author: string;
 	body: string;
 }
+
 const app = new Hono();
 app.use('/api/*', cors());
 
-app.get('/api/posts/:slug/comments', async c => {
-	const { slug } = c.req.param();
+app.get('/api/users/:email', async c => {
+	const { email } = c.req.param();
 	const { results } = await c.env.SVAPP_DB.prepare(
 		`
-    select * from comments where post_slug = ?
+    select * from users where email = ?
   `
 	)
-		.bind(slug)
+		.bind(email)
 		.all();
 	return c.json(results);
 });
