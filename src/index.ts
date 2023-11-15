@@ -51,11 +51,9 @@ interface UserInfo {
 app.post('/api/session', async c => {
 	const user = await c.req.json<UserInfo>();
 	const sessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-	console.log("user = " + JSON.stringify(user));
-	console.log("sessionId = " + sessionId);
+
 	try {
-		await c.env.KV.put(sessionId, user);
-		console.log("put");
+		await c.env.KV.put(sessionId, JSON.stringify(user));
 		return c.json({ sessionId: sessionId });
 	}
 	catch (e) {
