@@ -50,7 +50,7 @@ interface UserInfo {
 // セッション情報を保存するためのエンドポイント
 app.post('/api/session', async c => {
 	const user = await c.req.json<UserInfo>();
-	const sessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+	const sessionId = crypto.randomUUID();
 
 	try {
 		await c.env.KV.put(sessionId, JSON.stringify(user));
