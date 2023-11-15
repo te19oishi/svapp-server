@@ -58,8 +58,13 @@ app.post('/api/session', async c => {
 // セッション情報を取得するためのエンドポイント
 app.get('/api/session/:sessionId', async c => {
 	const { sessionId } = c.req.param();
-	const user = await c.env.KV.get<UserInfo>(sessionId);
-	return c.json(user);
+	try {
+		const user = await c.env.KV.get<UserInfo>(sessionId);
+		return c.json(user);
+	}
+	catch (e) {
+		return c.json({ UserInfo: null });
+	}
 });
 
 // セッション情報を削除するためのエンドポイント
