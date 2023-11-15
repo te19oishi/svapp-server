@@ -53,7 +53,7 @@ app.post('/api/session', async c => {
 	const sessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 	try {
 		await c.env.KV.put(sessionId, user);
-		return c.json({ sessionId });
+		return c.json({ sessionId: sessionId });
 	}
 	catch (e) {
 		return c.json({ sessionId: null });
