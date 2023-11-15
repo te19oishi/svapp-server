@@ -73,7 +73,7 @@ app.get('/api/session/:sessionId', async c => {
 	catch (e) {
 		console.log('catch');
 		console.log(e);
-		return c.json({ UserInfo: null });
+		return c.json(null);
 	}
 });
 
