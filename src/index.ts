@@ -64,11 +64,14 @@ app.post('/api/session', async c => {
 // セッション情報を取得するためのエンドポイント
 app.get('/api/session/:sessionId', async c => {
 	const { sessionId } = c.req.param();
+	console.log('try');
 	try {
 		const user = await c.env.KV.get<UserInfo>(sessionId);
+		console.log('user');
 		return c.json(user);
 	}
 	catch (e) {
+		console.log('catch');
 		console.log(e);
 		return c.json({ UserInfo: null });
 	}
