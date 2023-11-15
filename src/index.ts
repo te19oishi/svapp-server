@@ -51,8 +51,13 @@ interface UserInfo {
 app.post('/api/session', async c => {
 	const user = await c.req.json<UserInfo>();
 	const sessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-	await c.env.KV.set(sessionId, user);
-	return c.json({ sessionId });
+	try {
+		await c.env.KV.put(sessionId, user);
+		return c.json({ sessionId });
+	}
+	catch (e) {
+		return c.json({ sessionId: null });
+	}
 });
 
 // セッション情報を取得するためのエンドポイント
