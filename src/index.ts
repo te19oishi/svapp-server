@@ -67,7 +67,7 @@ app.get('/api/session/:sessionId', async c => {
 	console.log('try');
 	try {
 		const user = await c.env.KV.get<UserInfo>(sessionId);
-		console.log('user');
+		console.log('user', user);
 		return c.json(user);
 	}
 	catch (e) {
