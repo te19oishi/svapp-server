@@ -66,9 +66,12 @@ app.get('/api/session/:sessionId', async c => {
 	const { sessionId } = c.req.param();
 	console.log('try');
 	try {
-		const user = await c.env.KV.get<UserInfo>(sessionId);
-		console.log('user', user);
-		return c.json(user);
+    const userString = await c.env.KV.get<UserInfo>(sessionId);
+    console.log('user', userString);
+
+    // JSON文字列をオブジェクトに変換
+    const user = JSON.parse(userString);
+    return c.json(user);
 	}
 	catch (e) {
 		console.log('catch');
