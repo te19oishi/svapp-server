@@ -63,34 +63,76 @@ app.post('/api/session', async c => {
 
 // セッション情報を取得するためのエンドポイント
 app.get('/api/session/:sessionId', async c => {
-  const { sessionId } = c.req.param();
-  console.log('try');
-  try {
-    const userString = await c.env.KV.get<UserInfo>(sessionId);
-    console.log('userString', userString);
+	const { sessionId } = c.req.param();
+	try {
+		const userString = await c.env.KV.get<UserInfo>(sessionId);
 
-    if (!userString) {
-      return c.json({ error: 'User not found' }, 404);
-    }
+		if (!userString) {
+			return c.json({ error: 'User not found' }, 404);
+		}
 
-    // JSON文字列をオブジェクトに変換
-    const user = JSON.parse(userString);
-		console.log('user', user);
-    return c.json(user);
-  }
-  catch (e) {
-    console.log('catch');
-    console.log(e);
-    return c.json({ error: 'Internal Server Error' }, 500);
-  }
+		// JSON文字列をオブジェクトに変換
+		const user = JSON.parse(userString);
+		return c.json(user);
+	}
+	catch (e) {
+		console.log(e);
+		return c.json({ error: 'Internal Server Error' }, 500);
+	}
 });
 
 // セッション情報を削除するためのエンドポイント
 app.delete('/api/session/:sessionId', async c => {
-	const { sessionId } = c.req.param();
+	const sessionId = c.req.json();
 	await c.env.KV.delete(sessionId);
 	return c.json({ status: 'ok' });
 });
+
+
+
+// 出勤/退勤打刻のエンドポイント
+app.post('api/punch', async c => {
+	const sessionId = c.req.param();
+	const sessionData = await fetch('/api/session/' + sessionId);
+	if (sessionData.status !== 200) {
+		return c.json({ error: 'User not found' }, 404);
+	}
+	const userEmail = (await sessionData.json<UserInfo>()).email;
+	const userId = await c.env.SVAPP_DB.prepare(
+		`
+		SELECT id FROM users WHERE email = ?
+	`
+	)
+		.bind(userEmail)
+		.all();
+	const punchedRecord = await c.env.SVAPP_DB.prepare(
+		`
+		SELECT * FROM AttendanceRecords WHERE user_id = ? AND time_out IS NULL
+	`
+	)
+		.bind(userId)
+		.all();
+	if (punchedRecord.length > 0) {
+		const record = c.env.SVAPP_DB.prepare(
+			`
+			UPDATE AttendanceRecords SET time_out = ? WHERE user_id = ? AND time_out IS NULL
+		`
+		)
+			.bind(new Date().toISOString())
+			.bind(userId);
+		return c.json({ status: 'ok' });
+	} else {
+		const record = c.env.SVAPP_DB.prepare(
+			`
+			INSERT INTO AttendanceRecords (user_id, time_in) VALUES (?, ?)
+		`
+		)
+			.bind(userId)
+			.bind(new Date().toISOString());
+		return c.json({ status: 'ok' });
+	}
+});
+
 
 app.onError((err, c) => {
 	console.error(`${err}`);
