@@ -63,21 +63,26 @@ app.post('/api/session', async c => {
 
 // セッション情報を取得するためのエンドポイント
 app.get('/api/session/:sessionId', async c => {
-	const { sessionId } = c.req.param();
-	console.log('try');
-	try {
+  const { sessionId } = c.req.param();
+  console.log('try');
+  try {
     const userString = await c.env.KV.get<UserInfo>(sessionId);
-    console.log('user', userString);
+    console.log('userString', userString);
+
+    if (!userString) {
+      return c.json({ error: 'User not found' }, 404);
+    }
 
     // JSON文字列をオブジェクトに変換
     const user = JSON.parse(userString);
+		console.log('user', user);
     return c.json(user);
-	}
-	catch (e) {
-		console.log('catch');
-		console.log(e);
-		return c.json(null);
-	}
+  }
+  catch (e) {
+    console.log('catch');
+    console.log(e);
+    return c.json({ error: 'Internal Server Error' }, 500);
+  }
 });
 
 // セッション情報を削除するためのエンドポイント
