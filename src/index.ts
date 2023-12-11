@@ -117,23 +117,23 @@ app.post('api/punch', async c => {
 
 	const now = new Date().toISOString();
 	if (punchedRecord.length > 0) {
-		const record = c.env.SVAPP_DB.prepare(
+		c.env.SVAPP_DB.prepare(
 			`
 			UPDATE AttendanceRecords SET time_out = ? WHERE user_id = ? AND time_out IS NULL
 		`
 		)
 			.bind(now)
 			.bind(userId);
-		return c.json({ status: 'ok', "result": record });
+		return c.json({ status: 'ok', "time_out": now });
 	} else {
-		const record = c.env.SVAPP_DB.prepare(
+		c.env.SVAPP_DB.prepare(
 			`
 			INSERT INTO AttendanceRecords (user_id, time_in) VALUES (?, ?)
 		`
 		)
 			.bind(userId)
 			.bind(now);
-		return c.json({ status: 'ok', "result": record });
+		return c.json({ status: 'ok', "time_in": now });
 	}
 });
 
