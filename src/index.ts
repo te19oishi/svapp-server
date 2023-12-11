@@ -133,7 +133,7 @@ app.post('api/punch', async c => {
 		)
 			.bind(userId)
 			.bind(now);
-		return c.json({ status: 'ok', "time_in": now });
+		return c.json({ status: 'ok', "result": record });
 	}
 });
 
