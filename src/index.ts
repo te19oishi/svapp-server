@@ -126,7 +126,8 @@ app.post('api/punch', async c => {
 		`
 		)
 			.bind(now)
-			.bind(userId);
+			.bind(userId)
+			.run();
 		return c.json({ ok: true, "time_out": now });
 	} else {
 		c.env.SVAPP_DB.prepare(
@@ -135,7 +136,8 @@ app.post('api/punch', async c => {
 		`
 		)
 			.bind(userId)
-			.bind(now);
+			.bind(now)
+			.run();
 		return c.json({ ok: true, "time_in": now });
 	}
 });
