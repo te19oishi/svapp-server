@@ -92,14 +92,14 @@ app.delete('/api/session/:sessionId', async c => {
 
 
 // 出勤/退勤打刻のエンドポイント
-app.post('/api/punch', async c => {
-	const body = await c.req.json();
-	if (!body) {
-		return c.json({ error: 'Session not found' }, 404);
+app.get('/api/punch/:sessionId', async c => {
+	const { sessionId } = c.req.param();
+	if (!sessionId) {
+		return c.json({ error: 'SessionId not found' }, 404);
 	}
-	const sessionData = await fetch('https://svapp-server.hinaharu-0014.workers.dev/api/session/' + body.sessionId);
-	if (sessionData.status !== 200) {
-		return c.json({ error: 'User not found' }, 404);
+	const sessionData = await fetch('https://svapp-server.hinaharu-0014.workers.dev/api/session/' + sessionId);
+	if (!sessionData) {
+		return c.json({ error: 'Session not found' }, 404);
 	}
 	const userEmail = (await sessionData.json<UserInfo>()).email;
 	const userId = await c.env.SVAPP_DB.prepare(
@@ -128,7 +128,7 @@ app.post('/api/punch', async c => {
 			.bind(now)
 			.bind(userId)
 			.run();
-		return c.json({ ok: true, "time_out": now });
+			return c.json({ "time_out": now });
 	} else {
 		c.env.SVAPP_DB.prepare(
 			`
@@ -138,7 +138,7 @@ app.post('/api/punch', async c => {
 			.bind(userId)
 			.bind(now)
 			.run();
-		return c.json({ ok: true, "time_in": now });
+		return c.json({ "time_in": now });
 	}
 });
 
