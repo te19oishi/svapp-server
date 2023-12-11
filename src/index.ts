@@ -92,7 +92,7 @@ app.delete('/api/session/:sessionId', async c => {
 
 
 // 出勤/退勤打刻のエンドポイント
-app.post('api/punch', async c => {
+app.post('/api/punch', async c => {
 	const body = await c.req.json();
 	if (!body) {
 		return c.json({ error: 'Session not found' }, 404);
