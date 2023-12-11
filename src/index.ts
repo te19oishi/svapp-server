@@ -94,14 +94,23 @@ app.delete('/api/session/:sessionId', async c => {
 // 出勤/退勤打刻のエンドポイント
 app.get('/api/punch/:sessionId', async c => {
 	const { sessionId } = c.req.param();
-	if (!sessionId) {
-		return c.json({ error: 'SessionId not found' }, 404);
+	let user: UserInfo;
+	try {
+		const userString = await c.env.KV.get<UserInfo>(sessionId);
+
+		if (!userString) {
+			return c.json({ error: 'User not found' }, 404);
+		}
+
+		// JSON文字列をオブジェクトに変換
+		user = JSON.parse(userString);
+
 	}
-	const sessionData = await fetch('https://svapp-server.hinaharu-0014.workers.dev/api/session/' + sessionId);
-	if (!sessionData.ok) {
-		return c.json({ error: sessionData }, 404);
+	catch (e) {
+		console.log(e);
+		return c.json({ error: 'Internal Server Error' }, 500);
 	}
-	const userEmail = (await sessionData.json<UserInfo>()).email;
+	const userEmail = user.email;
 	const userId = await c.env.SVAPP_DB.prepare(
 		`
 		SELECT id FROM users WHERE email = ?
