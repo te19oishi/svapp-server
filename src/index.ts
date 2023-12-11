@@ -124,7 +124,7 @@ app.post('api/punch', async c => {
 		)
 			.bind(now)
 			.bind(userId);
-		return c.json({ status: 'ok', "time_out": now });
+		return c.json({ status: 'ok', "result": record });
 	} else {
 		const record = c.env.SVAPP_DB.prepare(
 			`
