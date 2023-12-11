@@ -98,7 +98,7 @@ app.get('/api/punch/:sessionId', async c => {
 		return c.json({ error: 'SessionId not found' }, 404);
 	}
 	const sessionData = await fetch('https://svapp-server.hinaharu-0014.workers.dev/api/session/' + sessionId);
-	if (!sessionData.ok) {
+	if (!sessionData) {
 		return c.json({ error: 'Session not found' }, 404);
 	}
 	const userEmail = (await sessionData.json<UserInfo>()).email;
@@ -122,7 +122,7 @@ app.get('/api/punch/:sessionId', async c => {
 		`
 		).bind(now).bind(userId).run();
 		return c.json({ "time_out": now });
-		
+
 	} else {
 		c.env.SVAPP_DB.prepare(
 			`
