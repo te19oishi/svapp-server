@@ -93,8 +93,11 @@ app.delete('/api/session/:sessionId', async c => {
 
 // 出勤/退勤打刻のエンドポイント
 app.post('api/punch', async c => {
-	const sessionId = c.req.param();
-	const sessionData = await fetch('/api/session/' + sessionId);
+	const body = await c.req.json();
+	if (!body) {
+		return c.json({ error: 'Session not found' }, 404);
+	}
+	const sessionData = await fetch('/api/session/' + body.sessionId);
 	if (sessionData.status !== 200) {
 		return c.json({ error: 'User not found' }, 404);
 	}
