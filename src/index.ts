@@ -97,7 +97,7 @@ app.post('api/punch', async c => {
 	if (!body) {
 		return c.json({ error: 'Session not found' }, 404);
 	}
-	const sessionData = await fetch('/api/session/' + body.sessionId);
+	const sessionData = await fetch('https://svapp-server.hinaharu-0014.workers.dev/api/session/' + body.sessionId);
 	if (sessionData.status !== 200) {
 		return c.json({ error: 'User not found' }, 404);
 	}
