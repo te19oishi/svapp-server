@@ -98,7 +98,7 @@ app.get('/api/punch/:sessionId', async c => {
 		return c.json({ error: 'SessionId not found' }, 404);
 	}
 	const sessionData = await fetch('https://svapp-server.hinaharu-0014.workers.dev/api/session/' + sessionId);
-	if (!sessionData) {
+	if (!sessionData.ok) {
 		return c.json({ error: 'Session not found' }, 404);
 	}
 	const userEmail = (await sessionData.json<UserInfo>()).email;
@@ -106,17 +106,13 @@ app.get('/api/punch/:sessionId', async c => {
 		`
 		SELECT id FROM users WHERE email = ?
 	`
-	)
-		.bind(userEmail)
-		.all();
+	).bind(userEmail).all();
 
 	const punchedRecord = await c.env.SVAPP_DB.prepare(
 		`
 		SELECT * FROM AttendanceRecords WHERE user_id = ? AND time_out IS NULL
 	`
-	)
-		.bind(userId)
-		.all();
+	).bind(userId).all();
 
 	const now = new Date().toISOString();
 	if (punchedRecord.length > 0) {
@@ -124,20 +120,15 @@ app.get('/api/punch/:sessionId', async c => {
 			`
 			UPDATE AttendanceRecords SET time_out = ? WHERE user_id = ? AND time_out IS NULL
 		`
-		)
-			.bind(now)
-			.bind(userId)
-			.run();
-			return c.json({ "time_out": now });
+		).bind(now).bind(userId).run();
+		return c.json({ "time_out": now });
+		
 	} else {
 		c.env.SVAPP_DB.prepare(
 			`
 			INSERT INTO AttendanceRecords (user_id, time_in) VALUES (?, ?)
 		`
-		)
-			.bind(userId)
-			.bind(now)
-			.run();
+		).bind(userId).bind(now).run();
 		return c.json({ "time_in": now });
 	}
 });
