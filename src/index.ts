@@ -4,6 +4,7 @@ import { cors } from 'hono/cors';
 const app = new Hono();
 app.use('/api/*', cors());
 
+// ユーザー情報を取得するためのエンドポイント
 app.get('/api/users/:email', async c => {
 	const { email } = c.req.param();
 	const { results } = await c.env.SVAPP_DB.prepare(
@@ -105,6 +106,7 @@ app.post('api/punch', async c => {
 	)
 		.bind(userEmail)
 		.all();
+
 	const punchedRecord = await c.env.SVAPP_DB.prepare(
 		`
 		SELECT * FROM AttendanceRecords WHERE user_id = ? AND time_out IS NULL
@@ -112,15 +114,17 @@ app.post('api/punch', async c => {
 	)
 		.bind(userId)
 		.all();
+
+	const now = new Date().toISOString();
 	if (punchedRecord.length > 0) {
 		const record = c.env.SVAPP_DB.prepare(
 			`
 			UPDATE AttendanceRecords SET time_out = ? WHERE user_id = ? AND time_out IS NULL
 		`
 		)
-			.bind(new Date().toISOString())
+			.bind(now)
 			.bind(userId);
-		return c.json({ status: 'ok' });
+		return c.json({ status: 'ok', "time_out": now });
 	} else {
 		const record = c.env.SVAPP_DB.prepare(
 			`
@@ -128,8 +132,8 @@ app.post('api/punch', async c => {
 		`
 		)
 			.bind(userId)
-			.bind(new Date().toISOString());
-		return c.json({ status: 'ok' });
+			.bind(now);
+		return c.json({ status: 'ok', "time_in": now });
 	}
 });
 
