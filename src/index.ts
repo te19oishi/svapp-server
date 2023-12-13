@@ -160,6 +160,58 @@ app.get('/api/punch/:sessionId', async c => {
 });
 
 
+app.get('/api/records/:sessionId/:page', async c => {
+	const sessionId = c.req.param('sessionId');
+	let userInfo: UserInfo;
+	try {
+		const userString = await c.env.KV.get<UserInfo>(sessionId);
+
+		if (!userString) {
+			return c.json({ error: 'User not found' }, 404);
+		}
+
+		// JSON文字列をオブジェクトに変換
+		userInfo = JSON.parse(userString);
+
+	}
+	catch (e) {
+		console.error(e);
+		return c.json({ error: 'Internal Server Error' }, 500);
+	}
+
+	const userEmail = userInfo.email;
+	if (!userEmail) {
+		return c.json({ error: 'UserEmail not found' }, 404);
+	}
+
+	const user = await c.env.SVAPP_DB.prepare(
+		`
+	SELECT * FROM users WHERE email = ?
+	`
+	).bind(userEmail).first();
+	if (!user) {
+		return c.json({ error: 'User not found' }, 404);
+	}
+
+	const userId = user.id;
+  const page = parseInt(c.req.param('page'), 10) || 1;
+  const limit = 31;
+  const offset = (page - 1) * limit;
+	
+	const records = await c.env.SVAPP_DB.prepare(
+		`
+		SELECT * FROM AttendanceRecords WHERE user_id = ? ORDER BY date DESC LIMIT ? OFFSET ?
+	`
+	).bind(userId, limit, offset).all();
+
+	const salary = getSalaryByRole(user.role);
+
+	return c.json({ records, salary });
+
+});
+
+
+
 app.onError((err, c) => {
 	console.error(`${err}`);
 	return c.text(err.toString());
@@ -176,3 +228,17 @@ function getJSTTimeString() {
   return timeString; // "HH:MM:SS" 形式
 }
 
+function getSalaryByRole(role: string) {
+	switch (role) {
+		case "owner":
+			return 3000;
+		case "manager":
+			return 2000;
+		case "staff":
+			return 1500;
+		case "parttime":
+			return 1200;
+		default:
+			return 1000;
+	}
+}
