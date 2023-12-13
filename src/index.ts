@@ -4,16 +4,19 @@ import { cors } from 'hono/cors';
 const app = new Hono();
 app.use('/api/*', cors());
 
+// ユーザー情報を取得するためのエンドポイント
 app.get('/api/users/:email', async c => {
 	const { email } = c.req.param();
 	const { results } = await c.env.SVAPP_DB.prepare(
 		`
-    SELECT * FROM users WHERE email = ?
+    SELECT * FROM users WHERE email = ? LIMIT 1
   `
 	)
 		.bind(email)
 		.all();
-	return c.json(results);
+
+	const user = results[0];
+	return c.json(user);
 });
 
 interface UserInfo {
@@ -63,34 +66,99 @@ app.post('/api/session', async c => {
 
 // セッション情報を取得するためのエンドポイント
 app.get('/api/session/:sessionId', async c => {
-  const { sessionId } = c.req.param();
-  console.log('try');
-  try {
-    const userString = await c.env.KV.get<UserInfo>(sessionId);
-    console.log('userString', userString);
+	const { sessionId } = c.req.param();
+	try {
+		const userString = await c.env.KV.get<UserInfo>(sessionId);
 
-    if (!userString) {
-      return c.json({ error: 'User not found' }, 404);
-    }
+		if (!userString) {
+			return c.json({ error: 'User not found' }, 404);
+		}
 
-    // JSON文字列をオブジェクトに変換
-    const user = JSON.parse(userString);
-		console.log('user', user);
-    return c.json(user);
-  }
-  catch (e) {
-    console.log('catch');
-    console.log(e);
-    return c.json({ error: 'Internal Server Error' }, 500);
-  }
+		// JSON文字列をオブジェクトに変換
+		const user = JSON.parse(userString);
+		return c.json(user);
+	}
+	catch (e) {
+		console.log(e);
+		return c.json({ error: 'Internal Server Error' }, 500);
+	}
 });
 
 // セッション情報を削除するためのエンドポイント
 app.delete('/api/session/:sessionId', async c => {
-	const { sessionId } = c.req.param();
+	const sessionId = c.req.json();
 	await c.env.KV.delete(sessionId);
 	return c.json({ status: 'ok' });
 });
+
+
+
+// 出勤/退勤打刻のエンドポイント
+app.get('/api/punch/:sessionId', async c => {
+	const { sessionId } = c.req.param();
+	let user: UserInfo;
+	try {
+		const userString = await c.env.KV.get<UserInfo>(sessionId);
+
+		if (!userString) {
+			return c.json({ error: 'User not found' }, 404);
+		}
+
+		// JSON文字列をオブジェクトに変換
+		user = JSON.parse(userString);
+
+	}
+	catch (e) {
+		console.error(e);
+		return c.json({ error: 'Internal Server Error' }, 500);
+	}
+
+	const userEmail = user.email;
+	if (!userEmail) {
+		return c.json({ error: 'UserEmail not found' }, 404);
+	}
+
+	const userIdsResult = await c.env.SVAPP_DB.prepare(
+		`
+  SELECT id FROM users WHERE email = ? LIMIT 1
+  `
+	).bind(userEmail).all();
+
+	// userIdsResult.results配列が空かどうかをチェック
+	if (userIdsResult.results.length === 0) {
+		return c.json({ error: 'UserId not found' }, 404);
+	}
+
+	const userId = userIdsResult.results[0].id;
+
+	const punchedRecord = await c.env.SVAPP_DB.prepare(
+		`
+		SELECT * FROM AttendanceRecords WHERE user_id = ? AND time_out IS NULL LIMIT 1
+	`
+	).bind(userId).all();
+
+	const date = new Date().toISOString().split('T')[0];
+	const time = getJSTTimeString();
+
+	if (punchedRecord.results.length !== 0) {
+		await c.env.SVAPP_DB.prepare(
+			`
+			UPDATE AttendanceRecords SET time_out = ? WHERE user_id = ? AND time_out IS NULL
+			`
+		).bind(time, userId).run();
+		return c.json({ "time_out": time, "date": date, "user_id": userId });
+
+	} else {
+		await c.env.SVAPP_DB.prepare(
+			`
+      INSERT INTO AttendanceRecords (user_id, date, time_in) VALUES (?, ?, ?)
+      `
+		).bind(userId, date, time).run();
+
+		return c.json({ "time_in": time, "date": date, "user_id": userId });
+	}
+});
+
 
 app.onError((err, c) => {
 	console.error(`${err}`);
@@ -100,3 +168,11 @@ app.onError((err, c) => {
 app.notFound(c => c.text('Not found', 404));
 
 export default app;
+
+function getJSTTimeString() {
+  const now = new Date();
+  now.setHours(now.getHours() + 9); // UTCからJSTに変換
+  const timeString = now.toISOString().split('T')[1].split('.')[0];
+  return timeString; // "HH:MM:SS" 形式
+}
+
