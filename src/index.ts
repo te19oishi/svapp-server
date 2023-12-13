@@ -9,12 +9,14 @@ app.get('/api/users/:email', async c => {
 	const { email } = c.req.param();
 	const { results } = await c.env.SVAPP_DB.prepare(
 		`
-    SELECT * FROM users WHERE email = ?
+    SELECT * FROM users WHERE email = ? LIMIT 1
   `
 	)
 		.bind(email)
 		.all();
-	return c.json(results);
+
+	const user = results[0];
+	return c.json(user);
 });
 
 interface UserInfo {
@@ -107,38 +109,53 @@ app.get('/api/punch/:sessionId', async c => {
 
 	}
 	catch (e) {
-		console.log(e);
+		console.error(e);
 		return c.json({ error: 'Internal Server Error' }, 500);
 	}
+
 	const userEmail = user.email;
-	const userId = await c.env.SVAPP_DB.prepare(
+	if (!userEmail) {
+		return c.json({ error: 'UserEmail not found' }, 404);
+	}
+
+	const userIdsResult = await c.env.SVAPP_DB.prepare(
 		`
-		SELECT id FROM users WHERE email = ?
-	`
+  SELECT id FROM users WHERE email = ? LIMIT 1
+  `
 	).bind(userEmail).all();
+
+	// userIdsResult.results配列が空かどうかをチェック
+	if (userIdsResult.results.length === 0) {
+		return c.json({ error: 'UserId not found' }, 404);
+	}
+
+	const userId = userIdsResult.results[0].id;
 
 	const punchedRecord = await c.env.SVAPP_DB.prepare(
 		`
-		SELECT * FROM AttendanceRecords WHERE user_id = ? AND time_out IS NULL
+		SELECT * FROM AttendanceRecords WHERE user_id = ? AND time_out IS NULL LIMIT 1
 	`
 	).bind(userId).all();
 
-	const now = new Date().toISOString();
-	if (punchedRecord.length > 0) {
-		c.env.SVAPP_DB.prepare(
+	const date = new Date().toISOString().split('T')[0];
+	const time = getJSTTimeString();
+
+	if (punchedRecord.results.length !== 0) {
+		await c.env.SVAPP_DB.prepare(
 			`
 			UPDATE AttendanceRecords SET time_out = ? WHERE user_id = ? AND time_out IS NULL
-		`
-		).bind(now).bind(userId).run();
-		return c.json({ "time_out": now });
-		
-	} else {
-		c.env.SVAPP_DB.prepare(
 			`
-			INSERT INTO AttendanceRecords (user_id, time_in) VALUES (?, ?)
-		`
-		).bind(userId).bind(now).run();
-		return c.json({ "time_in": now });
+		).bind(time, userId).run();
+		return c.json({ "time_out": time, "date": date, "user_id": userId });
+
+	} else {
+		await c.env.SVAPP_DB.prepare(
+			`
+      INSERT INTO AttendanceRecords (user_id, date, time_in) VALUES (?, ?, ?)
+      `
+		).bind(userId, date, time).run();
+
+		return c.json({ "time_in": time, "date": date, "user_id": userId });
 	}
 });
 
@@ -151,3 +168,11 @@ app.onError((err, c) => {
 app.notFound(c => c.text('Not found', 404));
 
 export default app;
+
+function getJSTTimeString() {
+  const now = new Date();
+  now.setHours(now.getHours() + 9); // UTCからJSTに変換
+  const timeString = now.toISOString().split('T')[1].split('.')[0];
+  return timeString; // "HH:MM:SS" 形式
+}
+
