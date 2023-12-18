@@ -1,5 +1,6 @@
-import { Hono } from 'hono';
+import { Context, Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { errors } from 'jose';
 
 const app = new Hono();
 app.use('/api/*', cors());
@@ -146,6 +147,9 @@ app.get('/api/punch/:sessionId', async c => {
 			UPDATE AttendanceRecords SET time_out = ? WHERE user_id = ? AND time_out IS NULL
 			`
 		).bind(time, userId).run();
+
+		insertWorkTimeManegement(c, userId, date, time);
+		
 		return c.json({ "time_out": time, "date": date, "user_id": userId });
 
 	} else {
@@ -245,4 +249,41 @@ function getSalaryByRole(role: string) {
 	}
 }
 
+async function insertWorkTimeManegement(c: Context, userId: number, date: string, timeOut: string) {
 
+	const timeIn = await c.env.SVAPP_DB.prepare(
+		`
+		SELECT time_in FROM AttendanceRecords WHERE user_id = ? AND date = ? LIMIT 1
+	`
+	).bind(userId, date).first();
+	if (!timeIn) {
+		return;
+	}
+
+	const workedHours = calculateTimeDifference(timeIn, timeOut);
+
+	await c.env.SVAPP_DB.prepare(
+		`
+		INSERT INTO WorkTimeManegement (user_id, date, worked_hours) VALUES (?, ?, ?)
+	`
+	).bind(userId, date, workedHours).run();
+	
+}
+
+//二つの時間差を求め、"HH:MM:SS" 形式の文字列で返す関数
+function calculateTimeDifference(time1: string, time2: string): string {
+
+	const dateTime1 = new Date(`2023-01-01T${time1}`);
+	const dateTime2 = new Date(`2023-01-01T${time2}`);
+
+	// ミリ秒単位で時間差を計算
+	const differenceInMilliseconds = Math.abs(dateTime2.getTime() - dateTime1.getTime());
+
+	// ミリ秒を時間、分、秒に変換
+	const hours = Math.floor(differenceInMilliseconds / 3600000); // 1時間 = 3600000ミリ秒
+	const minutes = Math.floor((differenceInMilliseconds % 3600000) / 60000); // 1分 = 60000ミリ秒
+	const seconds = Math.floor((differenceInMilliseconds % 60000) / 1000); // 1秒 = 1000ミリ秒
+
+	// 時間差を "HH:MM:SS" 形式の文字列で返す
+	return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
