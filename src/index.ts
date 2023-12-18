@@ -221,6 +221,8 @@ app.notFound(c => c.text('Not found', 404));
 
 export default app;
 
+
+
 function getJSTTimeString() {
   const now = new Date();
   now.setHours(now.getHours() + 9); // UTCからJSTに変換
@@ -242,3 +244,5 @@ function getSalaryByRole(role: string) {
 			return 1000;
 	}
 }
+
+
