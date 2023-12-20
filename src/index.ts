@@ -106,7 +106,7 @@ app.post('/api/session', async c => {
 	const sessionId = crypto.randomUUID();
 
 	try {
-		await c.env.KV.put(sessionId, JSON.stringify(user));
+		await c.env.KV.put(sessionId, JSON.stringify(user), { expirationTtl: 60*60*24 });
 		return c.json({ sessionId: sessionId });
 	}
 	catch (e) {
