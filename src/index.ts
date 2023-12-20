@@ -1,4 +1,4 @@
-import { Context, Hono } from 'hono';
+import { Context, Hono, HonoRequest } from 'hono';
 import { cors } from 'hono/cors';
 import { errors } from 'jose';
 
@@ -18,6 +18,55 @@ app.get('/api/users/:email', async c => {
 
 	const user = results[0];
 	return c.json(user);
+});
+
+app.post('/api/users/registration/:sessionId', async c => {
+	const sessionId = c.req.param('sessionId');
+	console.log(JSON.stringify(sessionId));
+	let user: UserInfo;
+	try {
+		const userString = await c.env.KV.get<UserInfo>(sessionId);
+		if (!userString) {
+			return c.json({ error: 'User not found' }, 404);
+		}
+
+		// JSON文字列をオブジェクトに変換
+		user = JSON.parse(userString);
+	}
+	catch (e) {
+		console.log(e);
+		return c.json({ error: 'Internal Server Error' }, 500);
+	}
+	if (!user) {
+		return c.json({ error: 'User not found' }, 404);
+	}
+	// ユーザーのroleをDBから取得する
+	const userRole = await c.env.SVAPP_DB.prepare(
+		`
+		SELECT role FROM users WHERE email = ? LIMIT 1
+	`
+	)
+		.bind(user.email)
+		.first();
+	if (userRole.role !== "owner") {
+		return c.json({ error: 'Not an authorized user' }, 404);
+	}
+
+	const name = c.req.header('name');
+	const email = c.req.header('email');
+	const role = c.req.header('role');
+	console.log(name, email, role);
+
+	// ユーザー情報をDBに登録する
+	await c.env.SVAPP_DB.prepare(
+		`
+		INSERT INTO users (name, email, role) VALUES (?, ?, ?)
+	`
+	)
+		.bind(name, email, role)
+		.run();
+
+	return c.json({ status: 'ok' });
 });
 
 interface UserInfo {
