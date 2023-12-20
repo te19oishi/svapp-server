@@ -11,6 +11,7 @@ CREATE TABLE AttendanceRecords (
     date DATE,
     time_in TIME,
     time_out TIME,
+    worked_time DECIMAL(5, 2),
     FOREIGN KEY (user_id) REFERENCES Users(id)
 );
 

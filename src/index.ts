@@ -148,8 +148,8 @@ app.get('/api/punch/:sessionId', async c => {
 			`
 		).bind(time, userId).run();
 
-		insertWorkTimeManegement(c, userId, date, time);
-		
+		await insertWorkTimeManegement(c, userId, date, time);
+
 		return c.json({ "time_out": time, "date": date, "user_id": userId });
 
 	} else {
@@ -260,13 +260,28 @@ async function insertWorkTimeManegement(c: Context, userId: number, date: string
 		return;
 	}
 
-	const workedHours = calculateTimeDifference(timeIn, timeOut);
+	const workedHours = calculateTimeDifference(timeIn.time_in, timeOut);
 
-	await c.env.SVAPP_DB.prepare(
+	// 既にWorkTimeManagementにレコードがあるかどうかをチェック
+	const workTimeManagements = await c.env.SVAPP_DB.prepare(
 		`
-		INSERT INTO WorkTimeManegement (user_id, date, worked_hours) VALUES (?, ?, ?)
+		SELECT * FROM WorkTimeManagement WHERE user_id = ? AND date = ? LIMIT 1
 	`
-	).bind(userId, date, workedHours).run();
+	).bind(userId, date).all();
+
+	if (workTimeManagements.results.length === 0) {
+		await c.env.SVAPP_DB.prepare(
+			`
+			INSERT INTO WorkTimeManagement (user_id, date, worked_hours) VALUES (?, ?, ?)
+		`
+		).bind(userId, date, workedHours).run();
+	} else {
+		await c.env.SVAPP_DB.prepare(
+			`
+			UPDATE WorkTimeManagement SET worked_hours = ? WHERE user_id = ? AND date = ?
+			`
+		).bind(workedHours, userId, date).run();
+	}
 	
 }
 
